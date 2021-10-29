@@ -1,0 +1,165 @@
+{
+    "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+    "contentVersion": "1.0.0.0",
+    "parameters": {
+        "AKSresourceName": {
+            "type": "string",
+            "metadata": {
+                "description": "The name of AKS resource"
+            }
+        },
+        "location": {
+            "type": "string",
+            "defaultValue": "[resourceGroup().location]",
+            "metadata": {
+                "description": "The location of the Managed Cluster resource."
+            }
+        },
+        "dnsPrefix": {
+            "type": "string",
+            "metadata": {
+                "description": "Optional DNS prefix to use with hosted Kubernetes API server FQDN."
+            }
+        },
+        "kubernetesVersion": {
+            "type": "string",
+            "defaultValue": "1.18.14",
+            "metadata": {
+                "description": "Kubernetes 的版本。"
+            }
+        },
+        "MasterNodeCount": {
+            "type": "int",
+            "metadata": {
+                "description": "The number of Master node."
+            }
+        },
+        "WorkerNodeCount": {
+            "type": "int",
+            "defaultValue": 3,
+            "metadata": {
+                "description": "The number of Worker node."
+            }
+        },
+        "networkPlugin": {
+            "type": "string",
+            "allowedValues": [
+                "azure",
+                "kubenet"
+            ],
+            "defaultValue": "kubenet",
+            "metadata": {
+                "description": "用于构建 Kubernetes 网络的网络插件。"
+            }
+        },
+        "enableRBAC": {
+            "type": "bool",
+            "defaultValue": true,
+            "metadata": {
+                "description": "用于打开和关闭 RBAC 的布尔型标志。"
+            }
+        },
+        "nodeResourceGroup": {
+            "type": "string",
+            "metadata": {
+                "description": "Name of the resource group containing agent pool nodes."
+            }
+        },
+        "vmssNodePool": {
+            "type": "bool",
+            "defaultValue": true,
+            "metadata": {
+                "description": "用于打开和关闭虚拟机规模集的布尔型标志"
+            }
+        },
+        "windowsProfile": {
+            "type": "bool",
+            "defaultValue": false,
+            "metadata": {
+                "description": "用于打开和关闭虚拟机规模集的布尔型标志"
+            }
+        },
+        "enablePrivateCluster": {
+            "type": "bool",
+            "defaultValue": false,
+            "metadata": {
+                "description": "启用对 Kubernetes 群集的专用网络访问。"
+            }
+        },
+        "enableAzurePolicy": {
+            "type": "bool",
+            "defaultValue": false,
+            "metadata": {
+                "description": "用于启用和禁用 Azure Policy 加载项的布尔型标志。"
+            }
+        },
+        "vmSize": {
+            "type": "string",
+            "metadata": {
+                "description": "虚拟机资源大小，Standard_F8s_v2 - 8vcpu、16GiB"
+            }
+        },
+        "networkPolicy": {
+            "type": "string",
+            "defaultValue": "calico",
+            "metadata": {
+                "description": "用于构建 Kubernetes 网络的网络策略。"
+            }
+        }
+    },
+    "resources": [
+        {
+            "apiVersion": "2020-09-01",
+            "type": "Microsoft.ContainerService/managedClusters",
+            "location": "[parameters('location')]",
+            "name": "[parameters('AKSresourceName')]",
+            "properties": {
+                "kubernetesVersion": "[parameters('kubernetesVersion')]",
+                "enableRBAC": "[parameters('enableRBAC')]",
+                "dnsPrefix": "[parameters('dnsPrefix')]",
+                "agentPoolProfiles": [
+                    {
+                        "name": "masterpools",
+                        "count": "[parameters('MasterNodeCount')]",
+                        "vmSize": "[parameters('vmSize')]",
+                        "osType": "Linux",
+                        "storageProfile": "ManagedDisks",
+                        "type": "VirtualMachineScaleSets",
+                        "mode": "System",
+                        "maxPods": 110
+                    },
+                    {
+                        "name": "workerpools",
+                        "count": "[parameters('WorkerNodeCount')]",
+                        "vmSize": "[parameters('vmSize')]",
+                        "osType": "Linux",
+                        "storageProfile": "ManagedDisks",
+                        "type": "VirtualMachineScaleSets",
+                        "mode": "User",
+                        "maxPods": 110
+                    }
+                ],
+                "networkProfile": {
+                    "loadBalancerSku": "standard",
+                    "networkPlugin": "[parameters('networkPlugin')]",
+                    "networkPolicy": "[parameters('networkPolicy')]"
+                },
+                "apiServerAccessProfile": {
+                    "enablePrivateCluster": "[parameters('enablePrivateCluster')]"
+                },
+                "addonProfiles": {
+                    "azurePolicy": {
+                        "enabled": "[parameters('enableAzurePolicy')]"
+                    }
+                },
+                "nodeResourceGroup": "[parameters('nodeResourceGroup')]"
+            },
+            "tags": {},
+            "identity": {
+                "type": "SystemAssigned"
+            }
+        }
+    ],
+    "outputs": {
+    }
+}
